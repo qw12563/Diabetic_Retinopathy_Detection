@@ -21,8 +21,10 @@ class dl_model():
     NB_EPOCH = 5
     
     def __init__(self, argv):
+        print(argv)
+
         self.argv = argv
-        self.BASE_PATH = argv[0]
+        self.BASE_PATH = '/Users/qiaoyanming/Desktop/dr2/Diabetic_Retinopathy_Detection/data'   #argv[0]
         self.dims_image = {'width': self.IMAGE_WIDTH, 'height': self.IMAGE_HEIGHT, 'channel': self.N_CHANNELS}
         self.dims_output = 5
     
@@ -46,8 +48,16 @@ class dl_model():
         return np.array(img).reshape((self.IMAGE_HEIGHT, self.IMAGE_WIDTH, self.N_CHANNELS))
 
     def image_batch_generator(self, array, batch_size, ext):
+
+        print(batch_size)
+
         path = os.path.join(self.BASE_PATH, ext)
+        # for i in range(0, len(array[0]), len(array[0])):
         for i in range(0, len(array[0]), batch_size):
+        #     print(len(array[0]))
+        #     print(i)
+        #     print(batch_size)
+
             batch = array[0][i: i+batch_size]
             data_batch = []
             for j, image_name in enumerate(batch):
@@ -60,25 +70,33 @@ class dl_model():
                         data_batch.append(self.image_transformation(image_path))
                 except:
                     print('Error reading: {}'.format(image_path))
+
+            # return data_batch;
             yield(np.array(data_batch))
+
     
     def execute(self):
         with tf.device('/cpu:0'):
             self.get_image_names()
+            # training_batch_generator = self.image_batch_generator(self.train_image_names_with_labels,
+            #                                                       len(self.train_image_names_with_labels[0]), self.EXT_TRAIN_DATA)
             training_batch_generator = self.image_batch_generator(self.train_image_names_with_labels, self.GENERATOR_BATCH_SIZE, self.EXT_TRAIN_DATA)
             tf_model = Tensorflow_Model(self.dims_image, self.dims_output) # CALCULATE dims_output
             
-            
+
             # TRAINING PHASE
             for i, training_batch in enumerate(training_batch_generator):
-                if not i > self.NB_EPOCH:
-                    tf_model.train(training_batch)
-                else:
-                    break
+                tf_model.train(training_batch, i)
+
+
+                # if not i > self.NB_EPOCH:
+                #     tf_model.train(training_batch)
+                # else:
+                #     break
 
 
 #        test_batch_generator = self.image_batch_generator(self.test_image_names, self.BATCH_SIZE, self.EXT_TEST_DATA)
 
 
 if __name__ == '__main__':
-    dl_model(sys.argv[1:]).execute()
+    dl_model(sys.argv).execute()

@@ -13,7 +13,7 @@ class Tensorflow_Model():
         self.dims_image = image_dims
         self.dims_output = output_dims
         self.padding = 'SAME'
-        self.sess =  tf.Session()
+        self.sess = tf.Session()
         
         self.__W = {
                 1: tf.Variable(tf.truncated_normal([5, 5, 3, 64], stddev=0.1)),
@@ -62,6 +62,9 @@ class Tensorflow_Model():
         return out
 
     def one_hot(self, Y):
+
+        # print(Y)
+
         max = np.max(Y)
         one_hot_encoded = np.zeros([Y.shape[0], max+1])
         for i, y in enumerate(Y):
@@ -80,20 +83,51 @@ class Tensorflow_Model():
         return x, y
 
 
-    def train(self, data):
+    def train1(self, data):
+
+        x = tf.placeholder(tf.float32,
+                           [None, self.dims_image['height'], self.dims_image['width'], self.dims_image['channel']])
+        y = tf.placeholder(tf.float32, [None, self.dims_output])
+        _y = self.model(x)
+
+
+    def train(self, data, tag):
         avg_cost = 0
         with tf.device('/cpu:0'):
-            x = tf.placeholder(tf.float32, [None, self.dims_image['height'], self.dims_image['width'], self.dims_image['channel']])
-            y = tf.placeholder(tf.float32, [None, self.dims_output])
+            x = tf.placeholder(tf.float32, [None, self.dims_image['height'], self.dims_image['width'], self.dims_image['channel']], name="x")
+            y = tf.placeholder(tf.float32, [None, self.dims_output], name="y")
             _y = self.model(x)
-            cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(_y, y))
+
+            cost = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=_y, labels=y))
+
             optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
             corr = tf.equal(tf.argmax(_y, 1), tf.argmax(y, 1))
             accr = tf.reduce_mean(tf.cast(corr, tf.float32))
-            
-            batch_x, batch_y = self.get_x_y(data)
-            self.sess.run(tf.initialize_all_variables())
+            # batch_x, batch_y = self.get_x_y(data)
+
+            self.saveModel(data)
+
+
+            return 
             self.sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
             avg_cost += self.sess.run(cost, feed_dict={x: batch_x, y: batch_y})/self.dims_output
             train_acc = self.sess.run(accr, feed_dict={x: batch_x, y: batch_y})
             print('Average Cost: {}, Training Accuracy: {}'.format(avg_cost, train_acc))
+
+
+    def saveModel(self, data):
+        # x = tf.placeholder(tf.float32,
+        #                    [None, self.dims_image['height'], self.dims_image['width'], self.dims_image['channel']],
+        #                    name="x")
+        # y = tf.placeholder(tf.float32, [None, self.dims_output], name="y")
+        # _y = self.model(x)
+
+        init = tf.initialize_all_variables()
+        saver = tf.train.Saver()
+        self.sess.run(init)
+        save_path = saver.save(self.sess, "Models/model.ckpt")
+
+
+    def preUseModel(self):
+        saver = tf.train.Saver()
+        saver.restore(self.sess, "Models/model.ckpt")
