@@ -2,6 +2,7 @@ import numpy as np
 import random
 import cv2, os
 import tensorflow as tf
+from jieba import xrange
 
 
 class Tensorflow_Model():
@@ -94,6 +95,13 @@ class Tensorflow_Model():
     def train(self, data, tag):
         avg_cost = 0
         with tf.device('/cpu:0'):
+            # self.ttt()
+
+            batch_x, batch_y = self.get_x_y(data)
+            self.pre(batch_x, batch_y)
+
+            return
+
             x = tf.placeholder(tf.float32, [None, self.dims_image['height'], self.dims_image['width'], self.dims_image['channel']], name="x")
             y = tf.placeholder(tf.float32, [None, self.dims_output], name="y")
             _y = self.model(x)
@@ -107,27 +115,51 @@ class Tensorflow_Model():
 
             self.saveModel(data)
 
-
-            return 
+            return
             self.sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
             avg_cost += self.sess.run(cost, feed_dict={x: batch_x, y: batch_y})/self.dims_output
             train_acc = self.sess.run(accr, feed_dict={x: batch_x, y: batch_y})
             print('Average Cost: {}, Training Accuracy: {}'.format(avg_cost, train_acc))
 
 
-    def saveModel(self, data):
-        # x = tf.placeholder(tf.float32,
-        #                    [None, self.dims_image['height'], self.dims_image['width'], self.dims_image['channel']],
-        #                    name="x")
-        # y = tf.placeholder(tf.float32, [None, self.dims_output], name="y")
-        # _y = self.model(x)
 
-        init = tf.initialize_all_variables()
+
+    def ttt(self):
+        x = tf.placeholder(tf.float32,
+                           [None, self.dims_image['height'], self.dims_image['width'], self.dims_image['channel']],
+                           name="x")
+        y = tf.placeholder(tf.float32, [None, self.dims_output], name="y")
+        _y = self.model(x)
+
+        # w1 = tf.Variable(tf.truncated_normal([in_dim, h1_dim], stddev=0.1), name='w1')
+        # b1 = tf.Variable(tf.zeros([h1_dim]), name='b1')
+        # w2 = tf.Variable(tf.zeros([h1_dim, out_dim]), name='w2')
+        # b2 = tf.Variable(tf.zeros([out_dim]), name='b2')
+
+
+        # keep_prob = tf.placeholder(tf.float32, name='keep_prob')
+
+        # hidden1 = tf.nn.relu(tf.matmul(self.input_x, w1) + b1)
+        # hidden1_drop = tf.nn.dropout(hidden1, self.keep_prob)
+        ### 定义预测目标
+        # y = tf.nn.softmax(tf.matmul(hidden1_drop, w2) + b2)
+        # 创建saver
+
         saver = tf.train.Saver()
-        self.sess.run(init)
-        save_path = saver.save(self.sess, "Models/model.ckpt")
+        # 假如需要保存y，以便在预测时使用
+        tf.add_to_collection('pred_network', _y)
 
+        self.sess.run(tf.global_variables_initializer())
+        saver.save(self.sess, "Models/model.ckpt")
 
-    def preUseModel(self):
-        saver = tf.train.Saver()
-        saver.restore(self.sess, "Models/model.ckpt")
+    def pre(self, xx, yy):
+        saver = tf.train.import_meta_graph('Models/model.ckpt.meta')
+        saver.restore(self.sess, 'Models/model.ckpt')  # .data文件
+        pred = tf.get_collection('pred_network')[0]
+
+        graph = tf.get_default_graph()
+        x = graph.get_operation_by_name('x').outputs[0]
+        y_ = graph.get_operation_by_name('y').outputs[0]
+
+        y = self.sess.run(pred, feed_dict={x: xx, y_: yy})
+        print(y)

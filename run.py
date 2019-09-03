@@ -24,7 +24,8 @@ class dl_model():
         print(argv)
 
         self.argv = argv
-        self.BASE_PATH = '/Users/qiaoyanming/Desktop/dr2/Diabetic_Retinopathy_Detection/data'   #argv[0]
+        self.BASE_PATH = './data'   #argv[0]
+        print(self.BASE_PATH)
         self.dims_image = {'width': self.IMAGE_WIDTH, 'height': self.IMAGE_HEIGHT, 'channel': self.N_CHANNELS}
         self.dims_output = 5
     
